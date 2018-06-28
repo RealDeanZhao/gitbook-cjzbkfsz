@@ -135,7 +135,100 @@ fabric-ca-server start
 {% endcode-tabs-item %}
 {% endcode-tabs %}
 
-## 准备fabric-ca-tools容器
+## 准备configtx.yaml以及它所需要的channel msp材料
 
-hyperledger/fabric-ca-tools镜像中包含了如cryptogen, configtxgen以及fabric-ca-client等工具. 我们可以用它来完成注册组织的管理员, 生成组织msp以及生成fabric网络的配置等工作. 
+hyperledger/fabric-ca-tools镜像中包含了如cryptogen, configtxgen以及fabric-ca-client等工具. 我们可以用它来生成channel msp材料. 当然我们不会用里面的cryptogen工具, 而是通过fabric-ca-client连接上一章节中的CA服务端来做这些事情.
+
+首先大概说明一下生成channel msp材料的步骤
+
+1. 为每个org登记CA admin
+2. 为每个org的每个node通过fabric-ca注册一个node identity, 账号:密码如peer1-google:peer1-googlepw
+3. 为每个org通过fabric-ca注册一个admin identity, 账号:密码如channel-admin-google:channel-admin-googlepw. 这个admin账号有权限操作channel.
+4. 为每个org获取ca证书
+5. 为每个org登记admin
+
+详细的生成步骤请看setup-fabric.sh脚本
+
+### setup容器
+
+{% code-tabs %}
+{% code-tabs-item title="docker-compose-setup.yaml" %}
+```yaml
+services:
+    setup:
+    container_name: setup
+    image: hyperledger/fabric-ca-tools:x86_64-1.1.0
+    command: /bin/bash -c '/scripts/setup-fabric.sh 2>&1 | tee /data/logs/setup.log; sleep 99999'
+    volumes:
+      - ./scripts:/scripts
+      - ./data:/data
+    networks:
+      - xyd-themis
+    depends_on:  # 依赖上一章生成的所有ca服务端
+      - ica-themis
+      - ica-xiaoyudian
+      - ica-jinzun
+      - ica-sute
+      - ica-beidouxing
+```
+{% endcode-tabs-item %}
+
+{% code-tabs-item title="setup-fabric.sh" %}
+```bash
+set -e
+
+# 这个脚本可以写成一个循环, 但为了描述详细, 就一步一步操作了
+# 为themis登记ca admin
+export FABRIC_CA_CLIENT_HOME=/etc/hyperledger/cas/ica-themis
+export FABRIC_CA_CLIENT_TLS_CERTFILES=/data/themis-ca-chain.pem
+fabric-ca-client enroll -d -u https://ica-themis-admin:ica-themis-adminpw:7054
+
+# 登记完成之后开始为themis的所有node注册identity
+fabric-ca-client register -d --id.name orderer1-themis --id.secret orderer1-themispw --id.type orderer
+
+# 为google登记ca admin
+export FABRIC_CA_CLIENT_HOME=/etc/hyperledger/cas/ica-google
+export FABRIC_CA_CLIENT_TLS_CERTFILES=/data/google-ca-chain.pem
+fabric-ca-client enroll -d -u https://ica-google-admin:ica-google-adminpw:7054
+
+# 为google获取CA证书
+fabric-ca-client getcacert -d -u https://ica-google-admin:ica-google-adminpw:7054 -M /data/orgs/google/msp
+# 将/data/orgs/google里面的内容复制到指定目录
+mkdir -p /data/orgs/google/msp/tlscacerts
+cp /data/orgs/google/msp/cacerts/* /data/orgs/google/msp/tlscacerts
+mkdir -p /data/orgs/google/msp/intermediatecerts
+cp /data/orgs/google/msp/intermediatecerts /data/orgs/google/msp/tlsintermediatecerts
+
+# 为google登记channel admin
+fabric-ca-client enroll -d -u https://ica-google-admin:ica-google-adminpw:7054 -M -M /tmp/msp
+
+
+
+
+# 登记完成之后开始为google的所有node注册identity
+fabric-ca-client register -d --id.name peer1-google --id.secret peer1-googlepw --id.type peer
+fabric-ca-client register -d --id.name peer2-google --id.secret peer2-googlepw --id.type peer
+
+# 为baidu登记ca admin
+export FABRIC_CA_CLIENT_HOME=/etc/hyperledger/cas/ica-baidu
+export FABRIC_CA_CLIENT_TLS_CERTFILES=/data/baidu-ca-chain.pem
+fabric-ca-client enroll -d -u https://ica-baidu-admin:ica-baidu-adminpw:7054
+
+# 登记完成之后开始为baidu的所有node注册identity
+fabric-ca-client register -d --id.name peer1-baidu --id.secret peer1-baidupw --id.type peer
+fabric-ca-client register -d --id.name peer2-baidu --id.secret peer2-baidupw --id.type peer
+
+# 为bing登记ca admin
+export FABRIC_CA_CLIENT_HOME=/etc/hyperledger/cas/ica-bing
+export FABRIC_CA_CLIENT_TLS_CERTFILES=/data/bing-ca-chain.pem
+fabric-ca-client enroll -d -u https://ica-bing-admin:ica-bing-adminpw:7054
+
+# 登记完成之后开始为baidu的所有node注册identity
+fabric-ca-client register -d --id.name peer1-bing --id.secret peer1-bingpw --id.type peer
+fabric-ca-client register -d --id.name peer2-bing --id.secret peer2-bingpw --id.type peer
+
+
+```
+{% endcode-tabs-item %}
+{% endcode-tabs %}
 
