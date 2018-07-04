@@ -13,20 +13,29 @@
 * Docker 18.03 +
 * Docker Compose 1.21.1 +
 
-现在我们需要搭建一个fabric网络, 它比官方文档的示例网络更全面, 有更多的org, 更多的channel以及fabric-ca与couchdb的集成. 网络节点信息如下:
+现在我们需要搭建一个fabric网络, 它比官方文档的示例网络更全面, 集成了fabric CA和CouchDB, 网络节点信息如下:
 
-* 4个Org, 其中rca-\* 表示Root CA, ica-\*表示Intermediate CA. 每个peer会连一个couchdb.
+* 4个Org
   * 1个Orderer Org, 采用solo模式
-    * themis: orderer1-themis, rca-themis, ica-themis
+    * themis: orderer1-themis
   * 3个Peer Org
-    * google: peer1-google, peer2-google, rca-google, ica-google, couchdb-peer1-google, couchdb-peer2-google
-    * baidu: peer1-baidu, peer2-baidu, rca-baidu, ica-baidu, couchdb-peer1-baidu, couchdb-peer2-baidu
-    * bing: peer1-bing, peer2-bing, rca-bing, ica-bing, couchdb-peer1-bing, couchdb-peer2-bing
-* 4个Channel
-  * google-baidu-channel   google与baidu的通道
-  * google-bing-channel    google与bing的通道
-  * bing-baidu-channel    google与baidu的通道
+    * google: peer1-google, peer2-google
+    * baidu: peer1-baidu, peer2-baidu
+    * bing: peer1-bing, peer2-bing
+* 1个Channel
   * all-in-one-channel  所有Org都加入的通道
+* 每个Org一个Root CA以及一个Intermediate CA
+  * themis:  rca-themis, ica-themis
+  * google: rca-google, ica-google
+  * baidu: rca-baidu, ica-baidu
+  * bing: rca-bing, ica-bing
+* 每个Peer一个CouchDB
+  * peer1-google: couchdb-peer1-google
+  * peer2-google: couchdb-peer2-google
+  * peer1-baidu: couchdb-peer1-baidu
+  * peer2-baidu: couchdb-peer2-baidu
+  * peer1-bing: couchdb-peer1-bing
+  * peer2-bing: couchdb-peer2-bing
 
 网络拓扑图如下: 后面再补充
 
